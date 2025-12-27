@@ -1,9 +1,9 @@
-import React, { useState, useEffect, useContext } from "react";
-import { useNavigate } from "react-router-dom";
-import AppBar from "@mui/material/AppBar";
-import Toolbar from "@mui/material/Toolbar";
-import AccountCircleIcon from "@mui/icons-material/AccountCircle";
-import LibraryMusicIcon from "@mui/icons-material/LibraryMusic";
+import React, { useState, useEffect, useContext } from "react"
+import { useNavigate } from "react-router-dom"
+import AppBar from "@mui/material/AppBar"
+import Toolbar from "@mui/material/Toolbar"
+import AccountCircleIcon from "@mui/icons-material/AccountCircle"
+import LibraryMusicIcon from "@mui/icons-material/LibraryMusic"
 import {
   Autocomplete,
   Badge,
@@ -13,93 +13,124 @@ import {
   TextField,
   Tooltip,
   Typography,
-} from "@mui/material";
-import style from "./Header.module.css";
-import NotificationsIcon from "@mui/icons-material/Notifications";
-import { getAllUsers, logout } from "../../helpers/userHelpers";
-import UserSearchCard from "../UserSearchCard";
-import { v4 as uuid } from "uuid";
-import UserContext from "./UserContext";
+} from "@mui/material"
+import style from "./Header.module.css"
+import NotificationsIcon from "@mui/icons-material/Notifications"
+import { getAllUsers, logout } from "../../helpers/userHelpers"
+import UserSearchCard from "../UserSearchCard"
+import { v4 as uuid } from "uuid"
+import UserContext from "./UserContext"
 import {
   getAllNotifications,
   readNotification,
-} from "../../helpers/notificationHelpers";
-import MenuIcon from '@mui/icons-material/Menu';
+} from "../../helpers/notificationHelpers"
+import { useSocket } from "../../context/SocketContext"
+import MenuIcon from "@mui/icons-material/Menu"
 
 const Header = () => {
-  const [anchorBurger, setAnchorBurger] = useState(null);
-  const [isNoticesOpen, setIsNoticesOpen] = useState(false);
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [anchorElUser, setAnchorElUser] = useState(null);
-  const [anchorNotice, setAnchorNotice] = useState(null);
-  const [allUsers, setAllUsers] = useState([]);
-  const [notifications, setNotifications] = useState([]);
-  const [autoVal, setAutoVal] = useState("");
-  const [windowWidth, setWindowWidth] = useState("");
+  const [anchorBurger, setAnchorBurger] = useState(null)
+  const [isNoticesOpen, setIsNoticesOpen] = useState(false)
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false)
+  const [anchorElUser, setAnchorElUser] = useState(null)
+  const [anchorNotice, setAnchorNotice] = useState(null)
+  const [allUsers, setAllUsers] = useState([])
+  const [notifications, setNotifications] = useState([])
+  const [autoVal, setAutoVal] = useState("")
+  const [windowWidth, setWindowWidth] = useState("")
 
-  const navigate = useNavigate();
-  const { currentUserInfo } = useContext(UserContext);
+  const navigate = useNavigate()
+  const { currentUserInfo } = useContext(UserContext)
+  const { socket } = useSocket()
 
-  const unreadCount = notifications.filter((n) => !n.isBeingRead).length;
+  const unreadCount = notifications.filter((n) => !n.isBeingRead).length
 
   useEffect(() => {
-    getAllUsersInfo();
-    getUserNotifications();
-    getWindowWidth();
+    getAllUsersInfo()
+    getUserNotifications()
+    getWindowWidth()
 
-    window.addEventListener('resize', getWindowWidth);
-  }, []);
+    window.addEventListener("resize", getWindowWidth)
+  }, [])
+
+  // Listen for real-time notifications via Socket.IO
+  useEffect(() => {
+    if (!socket || !currentUserInfo._id) return
+
+    const handleNewNotification = (data) => {
+      // Only add notification if it's for the current user
+      if (data.userId === currentUserInfo._id) {
+        setNotifications((prevNotifications) => {
+          // Check if notification already exists (avoid duplicates)
+          const exists = prevNotifications.some(
+            (n) => n._id === data.notification._id
+          )
+          if (exists) {
+            return prevNotifications
+          }
+          // Add new notification at the beginning of the array
+          return [data.notification, ...prevNotifications]
+        })
+      }
+    }
+
+    socket.on("new_notification", handleNewNotification)
+
+    // Cleanup listener on unmount or socket change
+    return () => {
+      socket.off("new_notification", handleNewNotification)
+    }
+  }, [socket, currentUserInfo._id])
 
   const getWindowWidth = () => {
-    const { innerWidth } = window;
-    setWindowWidth(innerWidth);
+    const { innerWidth } = window
+    setWindowWidth(innerWidth)
   }
 
   const getAllUsersInfo = async () => {
-    const data = await getAllUsers();
-    setAllUsers(data);
-  };
+    const data = await getAllUsers()
+    setAllUsers(data)
+  }
 
   const getUserNotifications = async () => {
-    const allNotifications = await getAllNotifications();
-    setNotifications(allNotifications);
-  };
+    const allNotifications = await getAllNotifications()
+    setNotifications(allNotifications)
+  }
 
   const handleProfileClicked = () => {
-    setAnchorElUser(null);
-    navigate(`/user-profile/${currentUserInfo._id}`);
-  };
+    setAnchorElUser(null)
+    navigate(`/user-profile/${currentUserInfo._id}`)
+  }
 
   const handleLogout = async () => {
-    setAnchorElUser(null);
+    setAnchorElUser(null)
 
     try {
-      await logout();
+      await logout()
     } catch (e) {
-      console.error("Failed to logout " + e);
+      console.error("Failed to logout " + e)
     } finally {
-      localStorage.removeItem("token");
-      navigate("/login");
+      localStorage.removeItem("token")
+      navigate("/login")
     }
-  };
+  }
 
   const handleReadingNotification = async (notificationId) => {
-    setAnchorNotice(null);
+    setAnchorNotice(null)
 
     try {
-      await readNotification(notificationId);
+      await readNotification(notificationId)
 
       const updatedNotifications = notifications.map((n) => {
-        if (n._id === notificationId) n.isBeingRead = true;
+        if (n._id === notificationId) n.isBeingRead = true
 
-        return n;
-      });
+        return n
+      })
 
-      setNotifications(updatedNotifications);
+      setNotifications(updatedNotifications)
     } catch (e) {
-      console.error("Failed to read notification " + e);
+      console.error("Failed to read notification " + e)
     }
-  };
+  }
 
   return (
     <AppBar position="sticky" className={style.appBar}>
@@ -143,7 +174,7 @@ const Header = () => {
           )}
         />
         <div className={style.wrapperIcons}>
-          {windowWidth > 768 &&
+          {windowWidth > 768 && (
             <>
               <Box>
                 <Tooltip
@@ -178,9 +209,13 @@ const Header = () => {
                     <MenuItem
                       key={uuid()}
                       style={{
-                        background: notification.isBeingRead ? "white" : "#f7dadd",
+                        background: notification.isBeingRead
+                          ? "white"
+                          : "#f7dadd",
                       }}
-                      onClick={() => handleReadingNotification(notification._id)}
+                      onClick={() =>
+                        handleReadingNotification(notification._id)
+                      }
                     >
                       <Typography>{notification.content}</Typography>
                     </MenuItem>
@@ -216,13 +251,16 @@ const Header = () => {
                   </MenuItem>
                 </Menu>
               </Box>
-            </>}
-          {
-            windowWidth <= 768 &&
+            </>
+          )}
+          {windowWidth <= 768 && (
             <Box>
               <Tooltip title="Menu">
-                <MenuIcon className={style.burgerMenu} sx={{ fontSize: 48 }}
-                  onClick={(e) => setAnchorBurger(e.currentTarget)} />
+                <MenuIcon
+                  className={style.burgerMenu}
+                  sx={{ fontSize: 48 }}
+                  onClick={(e) => setAnchorBurger(e.currentTarget)}
+                />
               </Tooltip>
 
               <Menu
@@ -237,49 +275,67 @@ const Header = () => {
                 }}
                 open={Boolean(anchorBurger)}
                 onClose={() => {
-                  setAnchorBurger(null);
-                  setIsNoticesOpen(false);
-                  setIsSettingsOpen(false);
+                  setAnchorBurger(null)
+                  setIsNoticesOpen(false)
+                  setIsSettingsOpen(false)
                 }}
               >
-                <MenuItem sx={{ width: 200, display: "flex", justifyContent: "center" }} onClick={() => setIsNoticesOpen(!isNoticesOpen)}>
+                <MenuItem
+                  sx={{ width: 200, display: "flex", justifyContent: "center" }}
+                  onClick={() => setIsNoticesOpen(!isNoticesOpen)}
+                >
                   <Typography>Notifications</Typography>
                 </MenuItem>
-                {isNoticesOpen && <Box className={style.boxContainer}>
-                  {notifications.map((notification) => (
-                    <Box className={style.boxInfo}
-                      key={uuid()}
-                      style={{
-                        background: notification.isBeingRead ? "white" : "#f7dadd",
-                      }}
-                      onClick={() => handleReadingNotification(notification._id)}
-                    >
-                      <Typography>{notification.content}</Typography>
-                    </Box>
-                  ))}
-                </Box>}
+                {isNoticesOpen && (
+                  <Box className={style.boxContainer}>
+                    {notifications.map((notification) => (
+                      <Box
+                        className={style.boxInfo}
+                        key={uuid()}
+                        style={{
+                          background: notification.isBeingRead
+                            ? "white"
+                            : "#f7dadd",
+                        }}
+                        onClick={() =>
+                          handleReadingNotification(notification._id)
+                        }
+                      >
+                        <Typography>{notification.content}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
 
-                <MenuItem sx={{ width: 200, display: "flex", justifyContent: "center" }} onClick={() => { setIsSettingsOpen(!isSettingsOpen) }}>
+                <MenuItem
+                  sx={{ width: 200, display: "flex", justifyContent: "center" }}
+                  onClick={() => {
+                    setIsSettingsOpen(!isSettingsOpen)
+                  }}
+                >
                   <Typography>Settings</Typography>
                 </MenuItem>
 
-                {isSettingsOpen &&
+                {isSettingsOpen && (
                   <Box className={style.boxContainer}>
-                    <Box className={style.boxInfo} onClick={handleProfileClicked}>
+                    <Box
+                      className={style.boxInfo}
+                      onClick={handleProfileClicked}
+                    >
                       <Typography>Profile</Typography>
                     </Box>
                     <Box className={style.boxInfo} onClick={handleLogout}>
                       <Typography>Log out</Typography>
                     </Box>
-                  </Box>}
-
+                  </Box>
+                )}
               </Menu>
             </Box>
-          }
+          )}
         </div>
       </Toolbar>
     </AppBar>
-  );
-};
+  )
+}
 
-export default Header;
+export default Header

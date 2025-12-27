@@ -1,4 +1,4 @@
 {
-  "base_url": "https://meetmusic.onrender.com",
-  "_base_url": "http://localhost:7000"
+  "base_url": "http://localhost:8000",
+  "_base_url": "http://localhost:8000"
 }

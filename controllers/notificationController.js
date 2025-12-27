@@ -1,10 +1,17 @@
 const NotificationModel = require("../models/notificationModel");
+const { emitNotificationToUser } = require("../socket/socketHandlers");
 
 const createNotification = async (req, res) => {
   try {
     const newNotification = await NotificationModel.create(req.body);
 
     await newNotification.save();
+
+    // Emit socket event to the target user if they are connected
+    const io = req.app.get("io");
+    if (io && newNotification.userToNote) {
+      emitNotificationToUser(io, newNotification.userToNote, newNotification);
+    }
 
     return res.status(201).json(newNotification);
   } catch (e) {

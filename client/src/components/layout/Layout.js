@@ -4,6 +4,7 @@ import Header from "./Header";
 import { getCurrentUserInfo } from "../../helpers/userHelpers";
 import UserContext from "./UserContext";
 import LoaderContext from "../context/LoaderContext";
+import { SocketProvider } from "../../context/SocketContext";
 import Loader from "../general/Loader";
 
 const Layout = () => {
@@ -20,13 +21,15 @@ const Layout = () => {
   };
 
   return (
-    <UserContext.Provider value={{ currentUserInfo }}>
-      <LoaderContext.Provider value={{ setLoading }}>
-        <Loader loading={loading} />
-        <Header />
-        <Outlet />
-      </LoaderContext.Provider>
-    </UserContext.Provider>
+    <SocketProvider>
+      <UserContext.Provider value={{ currentUserInfo }}>
+        <LoaderContext.Provider value={{ setLoading }}>
+          <Loader loading={loading} />
+          <Header />
+          <Outlet />
+        </LoaderContext.Provider>
+      </UserContext.Provider>
+    </SocketProvider>
   );
 };
 
